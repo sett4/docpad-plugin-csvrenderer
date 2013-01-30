@@ -1,15 +1,35 @@
 module.exports = (BasePlugin) ->
+    balUtil = require('bal-util')
+    
     class CsvrendererPlugin extends BasePlugin
         name: 'csvrenderer'
 
+        convertToCsvPath: (path) ->
+            if path.match(/\.html$/) then path.replace(/\.html$/, '.csv') else path+'.csv'
+
+        renderBefore: (opts,next) ->
+            docpad = @docpad
+            config = @config
+            csvRenderer = @
+            {collection, templateData} = opts
+            
+            csvModels = collection.findAll({extension: 'csv'})
+            csvModels.forEach (file) ->
+                url = file.get('url')
+                csvUrl = csvRenderer.convertToCsvPath(url)
+                file.setMeta({'csvUrl': csvUrl})
+
+            next()
         render: (opts,next) ->
             config = @config
             docpad = @docpad
             {inExtension,outExtension} = opts
+            
             if inExtension in ['csv'] and outExtension in ['html']
                 csv = require 'csv'
                 docpad.log('debug', 'CsvrendererPluging called')
                 html = '<table>'
+                
                 csv().from(opts.content).on 'end' ,() =>
                     html += '</tbody></table>'
                     opts.content = html
@@ -31,4 +51,19 @@ module.exports = (BasePlugin) ->
                     next()
             else
                 next()
+
+        writeAfter: (opts,next) ->
+            docpad = @docpad
+            config = @config
+            csvRenderer = @
+            {collection} = opts
             
+            csvModels = collection.findAll({extension: 'csv'})
+            csvModels.forEach (file) ->
+                csvPath = file.get('outPath').replace(/\.html$/, '.csv')
+                balUtil.writeFile csvPath, file.getContent(), (err) ->
+                    return next?(err) if err
+                    docpad = @docpad
+                    docpad.log('debug', "wrote csv file #{csvPath}")
+
+            next()
