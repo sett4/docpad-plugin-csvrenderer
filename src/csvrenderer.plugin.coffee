@@ -4,6 +4,10 @@ module.exports = (BasePlugin) ->
     class CsvrendererPlugin extends BasePlugin
         name: 'csvrenderer'
 
+        config:
+            tableClass: 'table table-striped'
+                    
+
         convertToCsvPath: (path) ->
             if path.match(/\.html$/) then path.replace(/\.html$/, '.csv') else path+'.csv'
 
@@ -28,7 +32,7 @@ module.exports = (BasePlugin) ->
             if inExtension in ['csv'] and outExtension in ['html']
                 csv = require 'csv'
                 docpad.log('debug', 'CsvrendererPluging called')
-                html = '<table>'
+                html = "<table class=\"#{config.tableClass}\">"
                 
                 csv().from(opts.content).on 'end' ,() =>
                     html += '</tbody></table>'
